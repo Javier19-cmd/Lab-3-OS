@@ -80,7 +80,7 @@ int main() {
         metodos esten bien. 
     */
 
-    
+
 
     // Validando el array.
     int valid = 1;

@@ -9,6 +9,20 @@ que todos los numeros del uno al nueve esten>
 
 #include <stdio.h>
 
+#define N 9
+
+int arr[9][9] = {
+        {1, 2, 3, 4, 5, 6, 7, 8, 9},
+        {4, 5, 6, 7, 8, 9, 1, 2, 3},
+        {7, 8, 9, 1, 2, 3, 4, 5, 6},
+        {2, 3, 4, 5, 6, 7, 8, 9, 1},
+        {5, 6, 7, 8, 9, 1, 2, 3, 4},
+        {8, 9, 1, 2, 3, 4, 5, 6, 7},
+        {3, 4, 5, 6, 7, 8, 9, 1, 2},
+        {6, 7, 8, 9, 1, 2, 3, 4, 5},
+        {9, 1, 2, 3, 4, 5, 6, 7, 8}
+    };
+
 int checkRow(int arr[][9], int row) {
     /*
         Este metodo revisa si los numeros del 1 al 9
@@ -63,21 +77,12 @@ int main() {
 
     /*
         Arreglo temporal para revisar que los 
-        metodos esten bien.
+        metodos esten bien. 
     */
 
-    int arr[9][9] = {
-        {1, 2, 3, 4, 5, 6, 7, 8, 9},
-        {4, 5, 6, 7, 8, 9, 1, 2, 3},
-        {7, 8, 9, 1, 2, 3, 4, 5, 6},
-        {2, 3, 4, 5, 6, 7, 8, 9, 1},
-        {5, 6, 7, 8, 9, 1, 2, 3, 4},
-        {8, 9, 1, 2, 3, 4, 5, 6, 7},
-        {3, 4, 5, 6, 7, 8, 9, 1, 2},
-        {6, 7, 8, 9, 1, 2, 3, 4, 5},
-        {9, 1, 2, 3, 4, 5, 6, 7, 8}
-    };
+    
 
+    // Validando el array.
     int valid = 1;
     for (int i = 0; i < 9; i++) {
         valid = valid && checkRow(arr, i) && checkColumn(arr, i);
@@ -87,8 +92,7 @@ int main() {
             valid = valid && checkSubgrid(arr, i, j);
         }
     }
-
-    if (valid) {
+     if (valid) {
         printf("El sudoku es válido\n");
     } else {
         printf("El sudoku es inválido\n");

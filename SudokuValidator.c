@@ -13,6 +13,7 @@ que todos los numeros del uno al nueve esten>
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <pthread.h>
 
 int matrix[9][9];
 
@@ -66,6 +67,50 @@ int checkSubgrid(int arr[][9], int row, int col) {
     return 1;
 }
 
+// Funcion para los procesos y algunos threads.
+
+int threadss() {
+
+        // Este metodo se encarga de crear los procesos y threads
+        // necesarios para validar el sudoku.
+    // Imprimiendo el PID del proceso padre.
+
+    int parent_pid = getpid();
+    printf("Estoy en el proceso padre con PID=%d\n", parent_pid);
+
+
+    int pid = fork();
+
+    if (pid == 0) { // proceso hijo
+        char parent_pid_str[10];
+        sprintf(parent_pid_str, "%d", parent_pid);
+        execlp("ps", "ps", "-p", parent_pid_str, "-lLf", NULL);
+    }
+    
+    if (pid > 0) { // proceso padre
+        //wait(NULL);
+        pthread_t thread;
+        //pthread_create(&thread, NULL, checkColumn(), NULL);
+        // Creando un thread que revisa las columnas.
+        for (int i = 0; i < 9; i++) {
+            printf("Creando el thread %d");
+            printf("\n");
+            pthread_create(&thread, NULL, checkColumn(matrix, i), NULL);
+            checkColumn(matrix, i);
+        }
+        pthread_join(thread, NULL);
+
+        printf("Terminando el proceso padre\n");
+
+        wait(NULL);
+    }
+    
+    return 0;
+}
+
+
+// Funcion principal.
+
 int main() {
 
     /*
@@ -77,6 +122,7 @@ int main() {
     int fd; // File descriptor.
     struct stat sb; // Informacion del archivo.
     char *addr; // Apuntador al archivo.
+
 
     fd = open("sudoku", O_RDONLY);
     if (fd == -1) { // Error al abrir el archivo.
@@ -116,6 +162,10 @@ int main() {
     // Cerrando el archivo.
     close(fd);
 
+    // Llamando al metodo threadss.
+    threadss();
+
+    /*
     // Validando el array.
     int valid = 1;
     for (int i = 0; i < 9; i++) {
@@ -130,7 +180,8 @@ int main() {
         printf("El sudoku es válido\n");
     } else {
         printf("El sudoku es inválido\n");
-    }
+    }*/
+
 
     return 0;
 }

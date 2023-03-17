@@ -8,20 +8,13 @@ que todos los numeros del uno al nueve esten>
 */
 
 #include <stdio.h>
+#include <stdlib.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <unistd.h>
 
-#define N 9
-
-int arr[9][9] = {
-        {1, 2, 3, 4, 5, 6, 7, 8, 9},
-        {4, 5, 6, 7, 8, 9, 1, 2, 3},
-        {7, 8, 9, 1, 2, 3, 4, 5, 6},
-        {2, 3, 4, 5, 6, 7, 8, 9, 1},
-        {5, 6, 7, 8, 9, 1, 2, 3, 4},
-        {8, 9, 1, 2, 3, 4, 5, 6, 7},
-        {3, 4, 5, 6, 7, 8, 9, 1, 2},
-        {6, 7, 8, 9, 1, 2, 3, 4, 5},
-        {9, 1, 2, 3, 4, 5, 6, 7, 8}
-    };
+int matrix[9][9];
 
 int checkRow(int arr[][9], int row) {
     /*
@@ -80,16 +73,57 @@ int main() {
         metodos esten bien. 
     */
 
+    // Abriendo el archivo.
+    int fd; // File descriptor.
+    struct stat sb; // Informacion del archivo.
+    char *addr; // Apuntador al archivo.
 
+    fd = open("sudoku", O_RDONLY);
+    if (fd == -1) { // Error al abrir el archivo.
+        perror("Hubo un error al abrir el archivo");
+        exit(EXIT_FAILURE);
+    }
+
+    if (fstat(fd, &sb) == -1) { // Error al leer el archivo.
+        perror("Error al obtener la informacion del archivo");
+        exit(EXIT_FAILURE);
+    }
+
+    addr = mmap(NULL, sb.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
+    if (addr == MAP_FAILED) { // Mappeo fallido.
+        perror("Error al mapear el archivo");
+        exit(EXIT_FAILURE);
+    }
+
+    // Copiando el archivo a un arreglo de 9x9.
+    int index = 0;
+
+    for (int i = 0; i < 9; i++) {
+        for (int j = 0; j < 9; j++) {
+            matrix[i][j] = addr[index] - '0';
+            index++;
+        }
+    }
+
+    // Imprimiendo el arreglo.
+    for (int i = 0; i < 9; i++) {
+        for (int j = 0; j < 9; j++) {
+            printf("%d ", matrix[i][j]);
+        }
+        printf("\n");
+    }
+
+    // Cerrando el archivo.
+    close(fd);
 
     // Validando el array.
     int valid = 1;
     for (int i = 0; i < 9; i++) {
-        valid = valid && checkRow(arr, i) && checkColumn(arr, i);
+        valid = valid && checkRow(matrix, i) && checkColumn(matrix, i);
     }
     for (int i = 0; i < 9; i += 3) {
         for (int j = 0; j < 9; j += 3) {
-            valid = valid && checkSubgrid(arr, i, j);
+            valid = valid && checkSubgrid(matrix, i, j);
         }
     }
      if (valid) {

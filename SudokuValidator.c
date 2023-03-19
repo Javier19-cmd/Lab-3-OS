@@ -15,18 +15,23 @@ que todos los numeros del uno al nueve esten>
 #include <unistd.h>
 #include <pthread.h>
 #include <sys/syscall.h>
+#include <omp.h>
 
-int matrix[9][9];
+int matrix[9][9]; // Matriz del sudoku.
 
 int checkRow(int arr[][9], int row) {
+    omp_set_num_threads(9);
+    omp_set_nested(1);
     /*
         Este metodo revisa si los numeros del 1 al 9
         estan en una fila especifica del arreglo.
     */
     int nums[10] = {0};
-    for (int i = 0; i < 9; i++) {
+    int i;
+    #pragma omp parallel for private(i) shared(arr,nums) //schedule(dynamic)
+    for (i = 0; i < 9; i++) {
         if (nums[arr[row][i]] == 1) {
-            return 0;
+            printf("\n");
         }
         nums[arr[row][i]] = 1;
     }
@@ -50,6 +55,8 @@ int checkRow(int arr[][9], int row) {
 //}
 
 void *checkColumn(void *arg) {
+    omp_set_num_threads(9);
+    omp_set_nested(1);
     /*
         Este metodo revisa que los numeros esten en una 
         columna especifica del arreglo que se le pasa.
@@ -58,6 +65,7 @@ void *checkColumn(void *arg) {
     int i,j,k;
     int valido = 1;
 
+    # pragma omp parallel for private(i,j,k) shared(arr,valido) //schedule(dynamic)
     for (j = 0; j < 9; j++) {
         int nums[9] = {0};
         
@@ -73,15 +81,17 @@ void *checkColumn(void *arg) {
     }
 
     if (valido == 1) {
-        printf("El sudoku es valido\n");
+        printf("\n");
     } else {
-        printf("El sudoku no es valido\n");
+        printf("\n");
     }
 
     return NULL;
 }
 
 int checkSubgrid(int arr[][9], int row, int col) {
+    omp_set_num_threads(9);
+    omp_set_nested(1);
     /*
         Este funcion revisa que los numeros del 1 al 9
         esten en un subarreglo de 3x3 dentro del arreglo de 
@@ -90,10 +100,13 @@ int checkSubgrid(int arr[][9], int row, int col) {
         del subarreglo que se esta revisando.
     */
     int nums[10] = {0};
-    for (int i = row; i < row + 3; i++) {
-        for (int j = col; j < col + 3; j++) {
+    int i,j;
+    #pragma omp parallel for private(i,j) shared(arr,nums) //schedule(dynamic)
+    for (i = row; i < row + 3; i++) {
+        for (j = col; j < col + 3; j++) {
             if (nums[arr[i][j]] == 1) {
-                return 0;
+                //printf("El sudoku no es valido\n");
+                break;
             }
             nums[arr[i][j]] = 1;
         }
@@ -104,13 +117,15 @@ int checkSubgrid(int arr[][9], int row, int col) {
 // Funcion para los procesos y algunos threads.
 
 int threadss() {
+    omp_set_num_threads(9);
+    omp_set_nested(1);
 
-        // Este metodo se encarga de crear los procesos y threads
-        // necesarios para validar el sudoku.
+    // Este metodo se encarga de crear los procesos y threads
+    // necesarios para validar el sudoku.
     // Imprimiendo el PID del proceso padre.
 
     int parent_pid = getpid();
-    printf("Estoy en el proceso padre con PID=%d\n", parent_pid);
+    //printf("Estoy en el proceso padre con PID=%d\n", parent_pid);
 
 
     int pid = fork();
@@ -119,7 +134,7 @@ int threadss() {
         char parent_pid_str[10];
         sprintf(parent_pid_str, "%d", parent_pid);
         execlp("ps", "ps", "-p", parent_pid_str, "-lLf", NULL);
-
+        
         // Ejecutando un fork para crear un proceso hijo.
         pid_t pid = fork();
 
@@ -145,13 +160,13 @@ int threadss() {
         wait(NULL); // Haciendo un wait al proceso hijo.
 
         // Revisando las filas.
-        for (int i = 0; i < 9; i++) {
+        int i;
+        #pragma omp parallel for private(i) shared(matrix) //schedule(dynamic)
+        for (i = 0; i < 9; i++) {
             if (checkRow(matrix, i) == 0) {
-                printf("El sudoku no es valido\n");
-                return 0;
+                printf("\n");
             }else {
-                printf("El sudoku es valido\n");
-                return 1;
+                printf("\n");
             }
         }
     }
@@ -174,6 +189,10 @@ int main() {
     struct stat sb; // Informacion del archivo.
     char *addr; // Apuntador al archivo.
 
+    omp_set_num_threads(9);
+    omp_set_nested(1);
+
+
 
     fd = open("sudoku", O_RDONLY);
     if (fd == -1) { // Error al abrir el archivo.
@@ -194,15 +213,17 @@ int main() {
 
     // Copiando el archivo a un arreglo de 9x9.
     int index = 0;
-
-    for (int i = 0; i < 9; i++) {
-        for (int j = 0; j < 9; j++) {
+    int i,j;
+    #pragma omp parallel for private(i,j) shared(matrix,addr) //schedule(dynamic)
+    for (i = 0; i < 9; i++) {
+        for (j = 0; j < 9; j++) {
             matrix[i][j] = addr[index] - '0';
             index++;
         }
     }
 
     // Imprimiendo el arreglo.
+    #pragma omp parallel for private(i,j) shared(matrix) //schedule(dynamic)
     for (int i = 0; i < 9; i++) {
         for (int j = 0; j < 9; j++) {
             printf("%d ", matrix[i][j]);
@@ -210,28 +231,25 @@ int main() {
         printf("\n");
     }
 
+    // Revisando cada subarreglo de 3x3.
+    #pragma omp parallel for private(i,j) shared(matrix) //schedule(dynamic)
+    for (int i = 0; i < 9; i += 3) {
+        for (int j = 0; j < 9; j += 3) {
+            if (checkSubgrid(matrix, i, j) == 0) {
+                printf("El sudoku no es valido\n");
+                break;
+            }else {
+                printf("El sudoku es valido\n");
+                break;
+            }
+        }
+    }
+
     // Cerrando el archivo.
     close(fd);
 
     // Llamando al metodo threadss.
     threadss();
-
-    /*
-    // Validando el array.
-    int valid = 1;
-    for (int i = 0; i < 9; i++) {
-        valid = valid && checkRow(matrix, i) && checkColumn(matrix, i);
-    }
-    for (int i = 0; i < 9; i += 3) {
-        for (int j = 0; j < 9; j += 3) {
-            valid = valid && checkSubgrid(matrix, i, j);
-        }
-    }
-     if (valid) {
-        printf("El sudoku es válido\n");
-    } else {
-        printf("El sudoku es inválido\n");
-    }*/
 
 
     return 0;

@@ -14,6 +14,7 @@ que todos los numeros del uno al nueve esten>
 #include <fcntl.h>
 #include <unistd.h>
 #include <pthread.h>
+#include <sys/syscall.h>
 
 int matrix[9][9];
 
@@ -32,19 +33,52 @@ int checkRow(int arr[][9], int row) {
     return 1;
 }
 
-int checkColumn(int arr[][9], int col) {
+
+//int checkColumn(int arr[][9], int col) {
     /*
         Este metodo revisa que los numeros esten en una 
         columna especifica del arreglo que se le pasa.
     */
-    int nums[10] = {0};
-    for (int i = 0; i < 9; i++) {
-        if (nums[arr[i][col]] == 1) {
-            return 0;
+//    int nums[10] = {0};
+//    for (int i = 0; i < 9; i++) {
+//        if (nums[arr[i][col]] == 1) {
+//            return 0;
+//        }
+//        nums[arr[i][col]] = 1;
+//    }
+//    return 1;
+//}
+
+void *checkColumn(void *arg) {
+    /*
+        Este metodo revisa que los numeros esten en una 
+        columna especifica del arreglo que se le pasa.
+    */
+    int (*arr)[9] = matrix;
+    int i,j,k;
+    int valido = 1;
+
+    for (j = 0; j < 9; j++) {
+        int nums[9] = {0};
+        
+        for (i = 0; i < 9; i++) {
+            k = arr[i][j] - 1;
+            if (nums[k] == 1) {
+                valido = 0;
+                break;
+            }
+
+            nums[k] = 1;
         }
-        nums[arr[i][col]] = 1;
     }
-    return 1;
+
+    if (valido == 1) {
+        printf("El sudoku es valido\n");
+    } else {
+        printf("El sudoku no es valido\n");
+    }
+
+    return NULL;
 }
 
 int checkSubgrid(int arr[][9], int row, int col) {
@@ -85,6 +119,14 @@ int threadss() {
         char parent_pid_str[10];
         sprintf(parent_pid_str, "%d", parent_pid);
         execlp("ps", "ps", "-p", parent_pid_str, "-lLf", NULL);
+
+        // Ejecutando un fork para crear un proceso hijo.
+        pid_t pid = fork();
+
+        // Esperando a que el proceso hijo termine.
+        wait(NULL);
+
+        return 0;
     }
     
     if (pid > 0) { // proceso padre
@@ -92,17 +134,26 @@ int threadss() {
         pthread_t thread;
         //pthread_create(&thread, NULL, checkColumn(), NULL);
         // Creando un thread que revisa las columnas.
+        pthread_create(&thread, NULL, checkColumn, matrix);
+
+        pthread_join(thread, NULL); // Haciendo un join al thread.
+
+        // Obteniendo el thread en ejecucion y desplegandolo.
+        pid_t tid = syscall(SYS_gettid);
+        printf("El thread con ID=%d esta en ejecucion\n", (long) tid);
+
+        wait(NULL); // Haciendo un wait al proceso hijo.
+
+        // Revisando las filas.
         for (int i = 0; i < 9; i++) {
-            printf("Creando el thread %d");
-            printf("\n");
-            pthread_create(&thread, NULL, checkColumn(matrix, i), NULL);
-            checkColumn(matrix, i);
+            if (checkRow(matrix, i) == 0) {
+                printf("El sudoku no es valido\n");
+                return 0;
+            }else {
+                printf("El sudoku es valido\n");
+                return 1;
+            }
         }
-        pthread_join(thread, NULL);
-
-        printf("Terminando el proceso padre\n");
-
-        wait(NULL);
     }
     
     return 0;
